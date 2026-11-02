@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>QCM Kubernetes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Tailwind CSS pour le design -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React et ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel pour traduire le JSX dans le navigateur -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body { background-color: #0f172a; color: #f8fafc; margin: 0; font-family: sans-serif; }
+  </style>
+</head>
+<body>
+  
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Fonction utilitaire pour mélanger un tableau
+    const shuffleArray = (array) => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    // Banque complète des questions extraites de tes notes
+    const bankOfQuestions = [
+      { question: "Charger l'environnement depuis le dossier de configuration :", correct: "source labs-config.sh", wrong: ["run labs-config.sh", "bash labs-config.sh", "./labs-config.sh"] },
+      { question: "Tester la communication avec le cluster :", correct: "kubectl cluster-info", wrong: ["kubectl status", "kubectl get cluster", "kubectl info"] },
+      { question: "Créer un namespace via un fichier yaml (ns-login.yaml) :", correct: "kubectl apply -f ns-login.yaml", wrong: ["kubectl create -f ns-login.yaml", "kubectl run ns-login.yaml", "kubectl add -f ns-login.yaml"] },
+      { question: "Vérifier la création du namespace ns-rlaurens :", correct: "kubectl get namespace ns-rlaurens", wrong: ["kubectl show namespace ns-rlaurens", "kubectl list namespace ns-rlaurens", "kubectl get ns-rlaurens"] },
+      { question: "Créer un pod via un fichier yaml (nginx-pod.yaml) :", correct: "kubectl apply -f nginx-pod.yaml", wrong: ["kubectl create pod nginx-pod.yaml", "kubectl run -f nginx-pod.yaml", "kubectl pod create nginx-pod.yaml"] },
+      { question: "Lister les pods dans le namespace ns-rlaurens :", correct: "kubectl get pods -n ns-rlaurens", wrong: ["kubectl show pods -n ns-rlaurens", "kubectl ls pods --namespace ns-rlaurens", "kubectl list pods ns-rlaurens"] },
+      { question: "Afficher un pod au format YAML :", correct: "kubectl get pod nginx-pod -n ns-rlaurens -o yaml", wrong: ["kubectl describe pod nginx-pod -n ns-rlaurens --yaml", "kubectl show pod nginx-pod -n ns-rlaurens --format yaml", "kubectl get yaml pod nginx-pod -n ns-rlaurens"] },
+      { question: "Afficher un pod au format JSON :", correct: "kubectl get pod nginx-pod -n ns-rlaurens -o json", wrong: ["kubectl dump pod nginx-pod -n ns-rlaurens -f json", "kubectl get pod nginx-pod -n ns-rlaurens --json", "kubectl show pod nginx-pod -n ns-rlaurens -o json"] },
+      { question: "Afficher le nom du conteneur avec jsonpath :", correct: "kubectl get pod nginx-pod -n ns-rlaurens -o jsonpath='{.spec.containers[*].name}'", wrong: ["kubectl get pod nginx-pod -n ns-rlaurens --jsonpath='{.containers.name}'", "kubectl describe pod nginx-pod -n ns-rlaurens --show-containers", "kubectl extract pod nginx-pod -n ns-rlaurens -o jsonpath='{.name}'"] },
+      { question: "Décrire en détail un pod :", correct: "kubectl describe pod nginx-pod -n ns-rlaurens", wrong: ["kubectl details pod nginx-pod -n ns-rlaurens", "kubectl get pod nginx-pod -n ns-rlaurens --details", "kubectl inspect pod nginx-pod -n ns-rlaurens"] },
+      { question: "Ouvrir un shell bash interactif dans un pod :", correct: "kubectl exec -it nginx-pod -n ns-rlaurens -- /bin/bash", wrong: ["kubectl attach -it nginx-pod -n ns-rlaurens -- /bin/bash", "kubectl shell nginx-pod -n ns-rlaurens", "kubectl ssh nginx-pod -n ns-rlaurens"] },
+      { question: "Afficher le nom d'hôte à l'intérieur du conteneur (une fois dans le bash) :", correct: "hostname", wrong: ["host-info", "get hostname", "kubectl hostname"] },
+      { question: "Supprimer un pod :", correct: "kubectl delete pod nginx-pod -n ns-rlaurens", wrong: ["kubectl remove pod nginx-pod -n ns-rlaurens", "kubectl rm pod nginx-pod -n ns-rlaurens", "kubectl destroy pod nginx-pod -n ns-rlaurens"] },
+      { question: "Appliquer un ReplicaSet via yaml :", correct: "kubectl apply -f rs-nginx.yaml", wrong: ["kubectl create -f rs-nginx.yaml", "kubectl run rs-nginx.yaml", "kubectl set -f rs-nginx.yaml"] },
+      { question: "Obtenir les informations d'un ReplicaSet précis :", correct: "kubectl get rs rs-nginx -n ns-rlaurens", wrong: ["kubectl show rs rs-nginx -n ns-rlaurens", "kubectl get replicaset rs-nginx --ns=ns-rlaurens", "kubectl list rs rs-nginx -n ns-rlaurens"] },
+      { question: "Décrire en détail un ReplicaSet :", correct: "kubectl describe rs rs-nginx -n ns-rlaurens", wrong: ["kubectl inspect rs rs-nginx -n ns-rlaurens", "kubectl info rs rs-nginx -n ns-rlaurens", "kubectl details rs rs-nginx -n ns-rlaurens"] },
+      { question: "Surveiller les pods en temps réel :", correct: "kubectl get pods -n ns-rlaurens -w", wrong: ["kubectl watch pods -n ns-rlaurens", "kubectl monitor pods -n ns-rlaurens", "kubectl get pods -n ns-rlaurens --live"] },
+      { question: "Augmenter (Scale UP) le ReplicaSet à 4 réplicas :", correct: "kubectl scale rs rs-nginx --replicas=4 -n ns-rlaurens", wrong: ["kubectl resize rs rs-nginx --size=4 -n ns-rlaurens", "kubectl update rs rs-nginx --replicas=4 -n ns-rlaurens", "kubectl set replicas rs rs-nginx 4 -n ns-rlaurens"] },
+      { question: "Diminuer (Scale DOWN) le ReplicaSet à 2 réplicas :", correct: "kubectl scale rs rs-nginx --replicas=2 -n ns-rlaurens", wrong: ["kubectl downscale rs rs-nginx --replicas=2 -n ns-rlaurens", "kubectl reduce rs rs-nginx --count=2 -n ns-rlaurens", "kubectl scale-down rs rs-nginx -n ns-rlaurens 2"] },
+      { question: "Supprimer un ReplicaSet :", correct: "kubectl delete rs rs-nginx -n ns-rlaurens", wrong: ["kubectl remove rs rs-nginx -n ns-rlaurens", "kubectl drop rs rs-nginx -n ns-rlaurens", "kubectl clean rs rs-nginx -n ns-rlaurens"] },
+      { question: "Vérifier que toutes les ressources ont disparu (tout lister) :", correct: "kubectl get all -n ns-rlaurens", wrong: ["kubectl get everything -n ns-rlaurens", "kubectl list all -n ns-rlaurens", "kubectl show all -n ns-rlaurens"] },
+      { question: "Appliquer un Deployment en sauvegardant l'historique :", correct: "kubectl apply -f dep-nginx.yaml --record=true", wrong: ["kubectl apply -f dep-nginx.yaml --save-history", "kubectl create -f dep-nginx.yaml --history=true", "kubectl deploy -f dep-nginx.yaml --record"] },
+      { question: "Obtenir les informations du Deployment :", correct: "kubectl get deployment dep-nginx -n ns-rlaurens", wrong: ["kubectl show deployment dep-nginx -n ns-rlaurens", "kubectl get deploy dep-nginx.yaml -n ns-rlaurens", "kubectl list deployment dep-nginx -n ns-rlaurens"] },
+      { question: "Décrire en détail le Deployment :", correct: "kubectl describe deployment dep-nginx -n ns-rlaurens", wrong: ["kubectl inspect deployment dep-nginx -n ns-rlaurens", "kubectl get deployment dep-nginx -n ns-rlaurens --describe", "kubectl details deployment dep-nginx -n ns-rlaurens"] },
+      { question: "Lister tous les ReplicaSets du namespace :", correct: "kubectl get rs -n ns-rlaurens", wrong: ["kubectl get replicasets all -n ns-rlaurens", "kubectl list rs -n ns-rlaurens", "kubectl show rs -n ns-rlaurens"] },
+      { question: "Mettre à jour l'image du Deployment (vers nginx:1.16.1) avec historique :", correct: "kubectl set image deployment/dep-nginx nginx=nginx:1.16.1 -n ns-rlaurens --record=true", wrong: ["kubectl update image deployment/dep-nginx nginx:1.16.1 -n ns-rlaurens", "kubectl change image deployment/dep-nginx nginx=nginx:1.16.1 -n ns-rlaurens", "kubectl apply image deployment/dep-nginx nginx:1.16.1 -n ns-rlaurens --record=true"] },
+      { question: "Voir le statut du déploiement en cours (rollout) :", correct: "kubectl rollout status deployment/dep-nginx -n ns-rlaurens", wrong: ["kubectl get rollout deployment/dep-nginx -n ns-rlaurens", "kubectl status deployment/dep-nginx -n ns-rlaurens", "kubectl check rollout deployment/dep-nginx -n ns-rlaurens"] },
+      { question: "Voir l'historique des révisions du Deployment :", correct: "kubectl rollout history deployment/dep-nginx -n ns-rlaurens", wrong: ["kubectl get history deployment/dep-nginx -n ns-rlaurens", "kubectl history deployment/dep-nginx -n ns-rlaurens", "kubectl rollout log deployment/dep-nginx -n ns-rlaurens"] },
+      { question: "Annuler (rollback) à la révision 2 du Deployment :", correct: "kubectl rollout undo deployment/dep-nginx --to-revision=2 -n ns-rlaurens", wrong: ["kubectl rollback deployment/dep-nginx --revision=2 -n ns-rlaurens", "kubectl revert deployment/dep-nginx --to=2 -n ns-rlaurens", "kubectl rollout revert deployment/dep-nginx --version=2 -n ns-rlaurens"] },
+      { question: "Augmenter (Scale UP) le Deployment à 4 réplicas :", correct: "kubectl scale deployment dep-nginx --replicas=4 -n ns-rlaurens", wrong: ["kubectl resize deployment dep-nginx --size=4 -n ns-rlaurens", "kubectl set replicas deployment/dep-nginx 4 -n ns-rlaurens", "kubectl expand deployment dep-nginx --replicas=4 -n ns-rlaurens"] }
+      { question: "Quel outil est une interface graphique dans le terminal (TUI) pour naviguer sur Kubernetes ?[cite: 1]", correct: "k9s", wrong: ["kubectl", "kube-gui", "lens"] },
+      { question: "Que contient le fichier labs-config.conf ?[cite: 1]", correct: "Les certificats d'authentification au cluster", wrong: ["Les mots de passe administrateur", "La configuration réseau des pods", "Les logs du cluster"] },
+      { question: "Quel est le rôle du script labs-config.sh ?[cite: 1]", correct: "Configurer l'environnement du terminal", wrong: ["Démarrer le cluster Kubernetes", "Créer un espace de nom", "Installer kubectl"] },
+      { question: "Où kubectl cherche-t-il sa configuration par défaut ?[cite: 1]", correct: "Dans la variable KUBECONFIG ou ~/.kube/config", wrong: ["Dans /etc/kubernetes/config", "Dans /var/lib/kubelet/config.yaml", "Dans ~/.bashrc"] },
+      { question: "Comment se définit un Pod dans Kubernetes ?[cite: 1]", correct: "La plus petite unité de calcul déployable", wrong: ["Un ensemble de nœuds de travail", "Un répartiteur de charge (LoadBalancer)", "Un espace de stockage persistant"] },
+      { question: "Que partagent les conteneurs au sein d'un même Pod ?[cite: 1]", correct: "Même adresse IP et espace de nommage réseau", wrong: ["Même image Docker", "Même limite de RAM exclusivement", "Mêmes variables d'environnement utilisateur"] },
+      { question: "Parmi ces états, lequel appartient au cycle de vie d'un Pod ?[cite: 1]", correct: "Pending", wrong: ["Waiting", "Loading", "Starting"] },
+      { question: "Comment un ReplicaSet fait-il le lien avec les Pods qu'il doit gérer ?[cite: 1]", correct: "Via des labels (étiquettes)", wrong: ["Via leurs adresses IP", "Via leur nom de conteneur", "Via l'espace de nom uniquement"] },
+      { question: "Que fait un ReplicaSet si on crée manuellement un pod avec le label qu'il surveille ?[cite: 1]", correct: "Il supprime un pod pour respecter le nombre désiré", wrong: ["Il augmente l'état désiré", "Il ignore le nouveau pod", "Il met le pod en pause"] },
+      { question: "Que se passe-t-il par défaut lorsqu'on supprime un ReplicaSet ?[cite: 1]", correct: "Il supprime tous les Pods qu'il gère", wrong: ["Il conserve les Pods existants", "Il redémarre les Pods", "Il archive les Pods"] },
+      { question: "Quelle est la hiérarchie correcte de ces ressources ?[cite: 1]", correct: "Deployment > ReplicaSet > Pod", wrong: ["ReplicaSet > Deployment > Pod", "Pod > ReplicaSet > Deployment", "Deployment > Pod > ReplicaSet"] },
+      { question: "À quoi sert l'option --record=true lors de la création d'un Deployment ?[cite: 1]", correct: "Sauvegarder la commande dans l'historique des révisions", wrong: ["Enregistrer les logs du pod", "Créer un backup du fichier yaml", "Garder une trace réseau"] },
+      { question: "Quel statut indique qu'une image de conteneur n'a pas pu être téléchargée ?[cite: 1]", correct: "ErrImagePull ou ImagePullBackOff", wrong: ["CrashLoopBackOff", "PendingForever", "ImageNotFound"] },
+      { question: "Comment réagit le Deployment face à une mise à jour contenant une image introuvable ?[cite: 1]", correct: "Il stoppe la mise à jour et conserve les anciens pods", wrong: ["Il supprime tout et crash", "Il fait un rollback automatique à la version -1", "Il force le démarrage du conteneur vide"] },
+      { question: "Quelle option de `kubectl get pods` permet de surveiller la création/suppression en temps réel ?[cite: 1]", correct: "-w (watch)", wrong: ["-f (follow)", "-l (live)", "-t (tail)"] }
+    ];
+
+    function App() {
+      const [questions, setQuestions] = useState([]);
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [score, setScore] = useState(0);
+      const [quizEnded, setQuizEnded] = useState(false);
+      
+      // États pour le feedback immédiat
+      const [showFeedback, setShowFeedback] = useState(false);
+      const [selectedAnswer, setSelectedAnswer] = useState(null);
+
+      // Initialisation et mélange des questions au chargement
+      useEffect(() => {
+        const shuffledQuestions = shuffleArray(bankOfQuestions).slice(0, 20); // 20 questions max
+        const preparedQuestions = shuffledQuestions.map(q => {
+          return {
+            ...q,
+            options: shuffleArray([q.correct, ...q.wrong])
+          };
+        });
+        setQuestions(preparedQuestions);
+      }, []);
+
+      const handleAnswer = (option) => {
+        // Bloque le clic si on a déjà répondu
+        if (showFeedback) return;
+
+        setSelectedAnswer(option);
+        setShowFeedback(true);
+
+        if (option === questions[currentIndex].correct) {
+          setScore(prev => prev + 1);
+        }
+      };
+
+      const handleNextQuestion = () => {
+        if (currentIndex < questions.length - 1) {
+          setCurrentIndex(prev => prev + 1);
+          setShowFeedback(false);
+          setSelectedAnswer(null);
+        } else {
+          setQuizEnded(true);
+        }
+      };
+
+      const restartQuiz = () => {
+        const shuffledQuestions = shuffleArray(bankOfQuestions).slice(0, 20);
+        const preparedQuestions = shuffledQuestions.map(q => {
+          return {
+            ...q,
+            options: shuffleArray([q.correct, ...q.wrong])
+          };
+        });
+        setQuestions(preparedQuestions);
+        setCurrentIndex(0);
+        setScore(0);
+        setQuizEnded(false);
+        setShowFeedback(false);
+        setSelectedAnswer(null);
+      };
+
+      if (questions.length === 0) return <div className="text-center mt-20 text-xl text-blue-400">Chargement du QCM...</div>;
+
+      if (quizEnded) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
+            <div className="bg-slate-800 p-8 rounded-xl shadow-2xl max-w-lg w-full text-center border border-slate-700">
+              <h1 className="text-3xl font-bold mb-6 text-blue-400">Résultats</h1>
+              <p className="text-2xl mb-8">Score: <span className="font-bold text-white">{score} / {questions.length}</span></p>
+              
+              <div className="space-y-4 mb-8">
+                {score === questions.length && <p className="text-green-400 font-semibold">Parfait ! Kubernetes n'a plus de secrets pour toi.</p>}
+                {score >= 10 && score < questions.length && <p className="text-yellow-400 font-semibold">Bon travail, tu as les bases !</p>}
+                {score < 10 && <p className="text-red-400 font-semibold">Il va falloir relire les notes !</p>}
+              </div>
+
+              <button 
+                onClick={restartQuiz}
+                className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-lg transition duration-200 w-full"
+              >
+                Rejouer un QCM
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      const currentQ = questions[currentIndex];
+
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
+          <div className="bg-slate-800 p-8 rounded-xl shadow-2xl max-w-2xl w-full border border-slate-700">
+            
+            <div className="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
+              <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
+                ⎈ K8s Quiz
+              </h1>
+              <span className="text-slate-400 font-medium">Question {currentIndex + 1} / {questions.length}</span>
+            </div>
+
+            <h2 className="text-xl font-medium mb-8 text-white">{currentQ.question}</h2>
+
+            <div className="space-y-4">
+              {currentQ.options.map((option, index) => {
+                // Logique de couleurs pour le feedback
+                let buttonStyle = "bg-slate-700 hover:bg-slate-600 text-slate-200 border-slate-600";
+                
+                if (showFeedback) {
+                  if (option === currentQ.correct) {
+                    // La bonne réponse apparaît en vert
+                    buttonStyle = "bg-green-600 text-white border-green-500 ring-2 ring-green-400";
+                  } else if (option === selectedAnswer) {
+                    // La mauvaise réponse cliquée apparaît en rouge
+                    buttonStyle = "bg-red-600 text-white border-red-500";
+                  } else {
+                    // Les autres réponses sont grisées
+                    buttonStyle = "bg-slate-800 text-slate-500 border-slate-700 opacity-50 cursor-not-allowed";
+                  }
+                }
+
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswer(option)}
+                    disabled={showFeedback}
+                    className={`w-full text-left p-4 rounded-lg border font-mono text-sm transition-all duration-200 ${buttonStyle}`}
+                  >
+                    <span className="mr-3 font-bold opacity-50">{String.fromCharCode(65 + index)}.</span>
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Le bouton "Suivant" n'apparaît que lorsqu'on a répondu */}
+            {showFeedback && (
+              <div className="mt-8 flex justify-end animate-fade-in">
+                <button 
+                  onClick={handleNextQuestion}
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:shadow-blue-500/20 transition duration-200"
+                >
+                  {currentIndex < questions.length - 1 ? 'Question Suivante ➔' : 'Voir les résultats ➔'}
+                </button>
+              </div>
+            )}
+            
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
